@@ -1,4 +1,5 @@
 name: Lab 6 AES Socket CI
+
 on:
   push:
   pull_request:
@@ -6,6 +7,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -21,5 +23,4 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run tests
-        run: |
-          PYTHONPATH=. pytest tests/ -q --tb=no
+        run: pytest -q
