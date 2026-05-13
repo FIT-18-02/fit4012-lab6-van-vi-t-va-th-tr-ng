@@ -1,137 +1,276 @@
-import os
 import struct
+import socket
 from typing import Tuple
-
 from Crypto.Cipher import AES
+from Crypto.Random import get_random_bytes
+
+# =========================
+# CONSTANTS
+# =========================
 
 BLOCK_SIZE = 16
 LENGTH_HEADER_SIZE = 4
-KEY_LENGTH_HEADER_SIZE = 4
 IV_SIZE = 16
 VALID_KEY_SIZES = (16, 32)
+SOCKET_TIMEOUT = 10
 
+
+# =========================
+# PKCS#7 PADDING
+# =========================
 
 def pad(data: bytes) -> bytes:
-    """Apply PKCS#7 padding for AES block size."""
+    """
+    PKCS#7 padding:
+    Đưa dữ liệu về bội số của 16 byte.
+    """
+
     pad_len = BLOCK_SIZE - (len(data) % BLOCK_SIZE)
+
     return data + bytes([pad_len]) * pad_len
 
 
 def unpad(data: bytes) -> bytes:
-    """Remove and validate PKCS#7 padding."""
+    """
+    Gỡ và kiểm tra PKCS#7 padding.
+    """
+
     if not data:
-        raise ValueError("Dữ liệu rỗng, không thể bỏ padding.")
+        raise ValueError("Dữ liệu rỗng.")
 
     pad_len = data[-1]
+
     if pad_len < 1 or pad_len > BLOCK_SIZE:
         raise ValueError("Padding không hợp lệ.")
 
-    expected = bytes([pad_len]) * pad_len
-    if data[-pad_len:] != expected:
-        raise ValueError("Padding PKCS#7 không hợp lệ.")
+    if data[-pad_len:] != bytes([pad_len]) * pad_len:
+        raise ValueError("Sai cấu trúc PKCS#7 padding.")
 
     return data[:-pad_len]
 
 
-def generate_key_iv(key_size: int = 16) -> Tuple[bytes, bytes]:
-    """Generate AES key and IV."""
-    if key_size not in VALID_KEY_SIZES:
-        raise ValueError("AES key size phải là 16 bytes (AES-128) hoặc 32 bytes (AES-256).")
-    return os.urandom(key_size), os.urandom(IV_SIZE)
+# =========================
+# KEY + IV
+# =========================
 
+def generate_aes_key(size: int = 32) -> bytes:
+    """
+    Sinh AES key:
+    - 16 byte = AES-128
+    - 32 byte = AES-256
+    """
 
-def validate_key_iv(key: bytes, iv: bytes) -> None:
-    if len(key) not in VALID_KEY_SIZES:
+    if size not in VALID_KEY_SIZES:
         raise ValueError("AES key phải dài 16 hoặc 32 byte.")
-    if len(iv) != IV_SIZE:
-        raise ValueError("IV của AES-CBC phải dài 16 byte.")
 
+    return get_random_bytes(size)
+
+
+def generate_iv() -> bytes:
+    """
+    AES-CBC cần IV 16 byte.
+    """
+
+    return get_random_bytes(IV_SIZE)
+
+
+# =========================
+# AES CBC
+# =========================
 
 def encrypt_aes_cbc(
-    plain: bytes,
-    key: bytes | None = None,
-    iv: bytes | None = None,
-    key_size: int = 16,
-) -> Tuple[bytes, bytes, bytes]:
-    """Encrypt plaintext with AES-CBC and PKCS#7 padding."""
-    if key is None or iv is None:
-        key, iv = generate_key_iv(key_size)
+    plaintext: bytes,
+    key: bytes,
+    iv: bytes
+) -> bytes:
+    """
+    Mã hóa AES-CBC.
+    """
 
-    validate_key_iv(key, iv)
+    if len(key) not in VALID_KEY_SIZES:
+        raise ValueError("Key size không hợp lệ.")
 
-    cipher = AES.new(key, AES.MODE_CBC, iv)
-    cipher_bytes = cipher.encrypt(pad(plain))
-    return key, iv, cipher_bytes
-
-
-def decrypt_aes_cbc(key: bytes, iv: bytes, cipher_bytes: bytes) -> bytes:
-    """Decrypt AES-CBC ciphertext and remove PKCS#7 padding."""
-    validate_key_iv(key, iv)
-
-    if len(cipher_bytes) == 0:
-        raise ValueError("Ciphertext không được rỗng.")
-    if len(cipher_bytes) % BLOCK_SIZE != 0:
-        raise ValueError("Ciphertext phải có độ dài là bội số của 16 byte.")
+    if len(iv) != IV_SIZE:
+        raise ValueError("IV phải dài 16 byte.")
 
     cipher = AES.new(key, AES.MODE_CBC, iv)
-    return unpad(cipher.decrypt(cipher_bytes))
+
+    padded = pad(plaintext)
+
+    return cipher.encrypt(padded)
 
 
-def build_key_packet(key: bytes, iv: bytes) -> bytes:
-    """Build packet for key channel: key_length + key + iv."""
-    validate_key_iv(key, iv)
-    return struct.pack("!I", len(key)) + key + iv
+def decrypt_aes_cbc(
+    ciphertext: bytes,
+    key: bytes,
+    iv: bytes
+) -> bytes:
+    """
+    Giải mã AES-CBC.
+    """
+
+    if len(key) not in VALID_KEY_SIZES:
+        raise ValueError("Key size không hợp lệ.")
+
+    if len(iv) != IV_SIZE:
+        raise ValueError("IV phải dài 16 byte.")
+
+    if not ciphertext:
+        raise ValueError("Ciphertext rỗng.")
+
+    if len(ciphertext) % BLOCK_SIZE != 0:
+        raise ValueError(
+            "Ciphertext không phải bội số của 16 byte."
+        )
+
+    cipher = AES.new(key, AES.MODE_CBC, iv)
+
+    padded_plaintext = cipher.decrypt(ciphertext)
+
+    return unpad(padded_plaintext)
 
 
-def parse_key_packet(packet: bytes) -> Tuple[bytes, bytes]:
-    """Parse key channel packet."""
-    if len(packet) < KEY_LENGTH_HEADER_SIZE + IV_SIZE:
-        raise ValueError("Key packet quá ngắn.")
+# =========================
+# KEY CHANNEL
+# FORMAT:
+# [key_length:4B][key][iv]
+# =========================
 
-    key_len = struct.unpack("!I", packet[:KEY_LENGTH_HEADER_SIZE])[0]
+def build_key_packet(
+    key: bytes,
+    iv: bytes
+) -> bytes:
+    """
+    Tạo packet cho key channel.
+    """
+
+    if len(key) not in VALID_KEY_SIZES:
+        raise ValueError("Key size không hợp lệ.")
+
+    if len(iv) != IV_SIZE:
+        raise ValueError("IV size không hợp lệ.")
+
+    key_len = len(key)
+
+    header = struct.pack("!I", key_len)
+
+    return header + key + iv
+
+
+def parse_key_packet(
+    packet: bytes
+) -> Tuple[bytes, bytes]:
+    """
+    Parse key packet:
+    [key_length][key][iv]
+    """
+
+    if len(packet) < LENGTH_HEADER_SIZE:
+        raise ValueError("Packet quá ngắn.")
+
+    key_len = struct.unpack(
+        "!I",
+        packet[:LENGTH_HEADER_SIZE]
+    )[0]
+
     if key_len not in VALID_KEY_SIZES:
         raise ValueError("Key length không hợp lệ.")
 
-    expected_len = KEY_LENGTH_HEADER_SIZE + key_len + IV_SIZE
-    if len(packet) != expected_len:
-        raise ValueError("Key packet có độ dài không đúng.")
+    expected_len = (
+        LENGTH_HEADER_SIZE +
+        key_len +
+        IV_SIZE
+    )
 
-    key_start = KEY_LENGTH_HEADER_SIZE
-    key_end = key_start + key_len
-    key = packet[key_start:key_end]
-    iv = packet[key_end:key_end + IV_SIZE]
-    validate_key_iv(key, iv)
+    if len(packet) != expected_len:
+        raise ValueError("Sai kích thước key packet.")
+
+    key = packet[
+        LENGTH_HEADER_SIZE:
+        LENGTH_HEADER_SIZE + key_len
+    ]
+
+    iv = packet[
+        LENGTH_HEADER_SIZE + key_len:
+    ]
+
     return key, iv
 
 
-def build_data_packet(cipher_bytes: bytes) -> bytes:
-    """Build packet for data channel: ciphertext_length + ciphertext."""
-    if len(cipher_bytes) == 0:
-        raise ValueError("Ciphertext không được rỗng.")
-    return struct.pack("!I", len(cipher_bytes)) + cipher_bytes
+# =========================
+# DATA CHANNEL
+# FORMAT:
+# [ciphertext_length:4B][ciphertext]
+# =========================
+
+def build_data_packet(
+    ciphertext: bytes
+) -> bytes:
+    """
+    Tạo packet cho data channel.
+    """
+
+    if not ciphertext:
+        raise ValueError("Ciphertext rỗng.")
+
+    header = struct.pack(
+        "!I",
+        len(ciphertext)
+    )
+
+    return header + ciphertext
 
 
-def parse_length_header(header: bytes) -> int:
-    """Parse 4-byte network-order length header."""
-    if len(header) != LENGTH_HEADER_SIZE:
-        raise ValueError("Length header phải dài đúng 4 byte.")
-    length = struct.unpack("!I", header)[0]
-    if length <= 0:
-        raise ValueError("Length header phải lớn hơn 0.")
-    return length
+def parse_data_packet(
+    packet: bytes
+) -> bytes:
+    """
+    Parse data packet.
+    """
+
+    if len(packet) < LENGTH_HEADER_SIZE:
+        raise ValueError("Packet quá ngắn.")
+
+    cipher_len = struct.unpack(
+        "!I",
+        packet[:LENGTH_HEADER_SIZE]
+    )[0]
+
+    ciphertext = packet[
+        LENGTH_HEADER_SIZE:
+    ]
+
+    if len(ciphertext) != cipher_len:
+        raise ValueError(
+            "Ciphertext length mismatch."
+        )
+
+    return ciphertext
 
 
-def recv_exact(conn, n: int) -> bytes:
-    """Receive exactly n bytes from a TCP connection."""
-    if n <= 0:
-        raise ValueError("Số byte cần nhận phải lớn hơn 0.")
+# =========================
+# TCP RECEIVE EXACT
+# =========================
 
-    chunks = []
-    received = 0
-    while received < n:
-        chunk = conn.recv(n - received)
-        if not chunk:
-            raise ConnectionError("Kết nối bị đóng trước khi nhận đủ dữ liệu.")
-        chunks.append(chunk)
-        received += len(chunk)
-    return b"".join(chunks)
+def recv_exact(
+    conn: socket.socket,
+    n: int
+) -> bytes:
+    """
+    Nhận đúng n byte từ TCP stream.
+    """
+
+    data = b""
+
+    while len(data) < n:
+
+        packet = conn.recv(n - len(data))
+
+        if not packet:
+            raise ConnectionError(
+                "Kết nối bị đóng giữa chừng."
+            )
+
+        data += packet
+
+    return data
