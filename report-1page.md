@@ -7,20 +7,21 @@
 
 ## Mục tiêu
 //hihahaa
-Hà Văn Việt: Bài lab nhằm xây dựng hệ thống gửi và nhận dữ liệu qua socket TCP với mã hóa AES-CBC. Hệ thống tách biệt hai kênh truyền: **key channel** để gửi AES key và IV, **data channel** để gửi ciphertext. Sinh viên hiểu được luồng hoạt động của mã hóa đối xứng trong ứng dụng mạng, cách sử dụng PKCS#7 padding, length header, và phân tích các điểm yếu bảo mật khi key được gửi ở dạng plaintext.
+ Hoàng Thế Trường : Bài lab nhằm xây dựng hệ thống gửi và nhận dữ liệu qua socket TCP với mã hóa AES-CBC. Hệ thống tách biệt hai kênh truyền: **key channel** để gửi AES key và IV, **data channel** để gửi ciphertext. Sinh viên hiểu được luồng hoạt động của mã hóa đối xứng trong ứng dụng mạng, cách sử dụng PKCS#7 padding, length header, và phân tích các điểm yếu bảo mật khi key được gửi ở dạng plaintext.
 
 ## Phân công thực hiện
 
 | Vai trò | Phụ trách chính |
 |---------|----------------|
-| **Sender** (mã hóa, key channel, data channel) | Hà Văn Việt |
+| **Sender** (mã hóa, key channel, data channel) | Hà Văn Việt|
 | **Receiver** (giải mã, nhận packet, xử lý lỗi) | Hoàng Thế Trường |
 | **Test cases** (pytest, wrong key, tamper) | Cả hai |
 | **Log & Minh chứng** | Hà Văn Việt |
-| **Threat model** | Hoàng Thế Trường |
+| **Threat model** | Phạm Anh Quân |
 | **Báo cáo & Phần chung** | Cả hai |
 
 ## Cách làm
+
 
 ### 1. Sender (Hà Văn Việt thực hiện)
 - Đọc dữ liệu từ biến môi trường `MESSAGE` hoặc file `INPUT_FILE`
@@ -30,7 +31,7 @@ Hà Văn Việt: Bài lab nhằm xây dựng hệ thống gửi và nhận dữ 
 - Xây dựng **data packet**: `[ciphertext_length:4 bytes][ciphertext:N]`
 - Gửi lần lượt qua KEY_PORT và DATA_PORT
 
-### 2. Receiver (Hoàng Thế Trường thực hiện)
+### 2. Receiver ( Hoàng Thế Trường thực hiện)
 - Lắng nghe trên KEY_PORT và DATA_PORT (chạy trước)
 - Nhận key packet bằng hàm `recv_exact()` (đọc đủ 4 byte length header, sau đó đọc đúng số byte data)
 - Parse key packet để lấy key và IV
@@ -57,7 +58,7 @@ SERVER_IP=127.0.0.1 KEY_PORT=6001 DATA_PORT=6000 MESSAGE="Xin chao FIT4012" pyth
 
 Hà Văn Việt : Tóm tắt kết quả chạy, log minh chứng, output nhận được và các test quan trọng.
 Hệ thống Sender và Receiver hoạt động ổn định trên localhost thông qua giao thức TCP socket. Sender thực hiện mã hóa plaintext bằng AES-CBC với khóa AES và IV được sinh ngẫu nhiên, sau đó gửi key packet và data packet qua hai cổng riêng biệt. Receiver nhận đúng packet, parse dữ liệu thành công và giải mã lại chính xác nội dung ban đầu.
-// vt
+// qh
 Trong quá trình kiểm thử:
 
 Chương trình gửi và nhận thành công với nhiều dữ liệu có độ dài khác nhau.
@@ -68,5 +69,5 @@ Packet length header hoạt động đúng, giúp Receiver đọc đủ dữ li�
 
 ## Kết luận
 
-Hoàng Thế Trường : Rút ra bài học kỹ thuật và bài học bảo mật từ bài lab.
+ Hoàng Thế Trường : Rút ra bài học kỹ thuật và bài học bảo mật từ bài lab.
 Qua bài lab, nhóm hiểu được cách triển khai AES-CBC trong ứng dụng socket TCP thực tế, bao gồm quy trình sinh khóa, padding dữ liệu, mã hóa, truyền packet và giải mã. Bài lab cũng cho thấy tầm quan trọng của việc bảo vệ khóa bí mật trong truyền thông mạng. Việc gửi AES key dưới dạng plaintext là một điểm yếu lớn vì attacker có thể nghe lén và giải mã toàn bộ dữ liệu. Từ đó, nhóm nhận thấy cần kết hợp thêm các cơ chế như RSA, Diffie-Hellman hoặc TLS để trao đổi khóa an toàn hơn trong hệ thống thực tế.
