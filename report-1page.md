@@ -23,6 +23,7 @@
 ## Cách làm
 
 
+
 ### 1. Sender (Hà Văn Việt thực hiện)
 - Đọc dữ liệu từ biến môi trường `MESSAGE` hoặc file `INPUT_FILE`
 - Sinh AES key (16 byte) và IV (16 byte) ngẫu nhiên
