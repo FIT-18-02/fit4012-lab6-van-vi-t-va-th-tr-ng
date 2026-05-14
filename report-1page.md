@@ -13,11 +13,11 @@ Hà Văn Việt: Bài lab nhằm xây dựng hệ thống gửi và nhận dữ 
 
 | Vai trò | Phụ trách chính |
 |---------|----------------|
-| **Sender** (mã hóa, key channel, data channel) | Ngô Văn Hiếu |
-| **Receiver** (giải mã, nhận packet, xử lý lỗi) | Phạm Anh Quân |
+| **Sender** (mã hóa, key channel, data channel) | Hà Văn Việt |
+| **Receiver** (giải mã, nhận packet, xử lý lỗi) | Hoàng Thế Trường |
 | **Test cases** (pytest, wrong key, tamper) | Cả hai |
-| **Log & Minh chứng** | Ngô Văn Hiếu |
-| **Threat model** | Phạm Anh Quân |
+| **Log & Minh chứng** | Hà Văn Việt |
+| **Threat model** | Hoàng Thế Trường |
 | **Báo cáo & Phần chung** | Cả hai |
 
 ## Cách làm
