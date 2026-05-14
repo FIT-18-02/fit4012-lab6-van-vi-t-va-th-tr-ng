@@ -6,3 +6,4 @@ pytest>=8.0.0
 
 # Thư viện hỗ trợ quản lý biến môi trường
 python-dotenv>=1.0.1
+
