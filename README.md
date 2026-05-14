@@ -16,8 +16,8 @@ Lab này kế thừa ý tưởng từ Lab 3 DES Socket, nhưng nâng cấp theo 
 
 ## Team members
 
-- **Thành viên 1**: Hà Văn Việt- MSSV: 1871020652
-- **Thành viên 2**: Hoàng Thế Trường - MSSV: 1871020599
+- **Thành viên 1**: Phạm Anh Quân - MSSV: 1871020471
+- **Thành viên 2**: Ngô Văn Hiếu - MSSV: 1871020234
 
 ## Task division
 
@@ -26,7 +26,7 @@ Lab này kế thừa ý tưởng từ Lab 3 DES Socket, nhưng nâng cấp theo 
 - **Phần làm chung**: Thiết kế kịch bản kiểm thử (tests), viết báo cáo và phân tích mô hình đe dọa.
 
 ## Demo roles
-//vt
+//qh
 - **Demo Sender / kênh khóa / log gửi**: Phạm Anh Quân
 - **Demo Receiver / kênh dữ liệu / giải mã**: Ngô Văn Hiếu
 - **Cả hai cùng trả lời threat model và ethics**: Cả nhóm cùng thực hiện
