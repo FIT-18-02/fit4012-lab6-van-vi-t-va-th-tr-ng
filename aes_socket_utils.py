@@ -7,6 +7,7 @@ from Crypto.Cipher import AES
 # ==================================================
 # Cấu hình hệ thống
 # ==================================================
+
 BLOCK_SIZE = 16
 LENGTH_HEADER_SIZE = 4
 KEY_LENGTH_HEADER_SIZE = 4
