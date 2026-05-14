@@ -5,6 +5,7 @@ import io
 import time
 from pathlib import Path
 
+
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 from aes_socket_utils import build_data_packet, build_key_packet, encrypt_aes_cbc
