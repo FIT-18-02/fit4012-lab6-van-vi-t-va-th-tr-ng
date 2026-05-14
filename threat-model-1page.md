@@ -2,9 +2,8 @@
 
 ## Thông tin nhóm
 
-
-- Thành viên 1:  - MSSV:Hà Văn VIệt 1871020652
-- Thành viên 2:  - MSSV:Hoàng Thế Trường 1871020599
+- Thành viên 1: Hà Văn Việt - MSSV: 1871020652
+- Thành viên 2: Hoàng Thế Trường - MSSV: 1871020599
 
 ## Assets
 //vt
